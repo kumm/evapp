@@ -23,7 +23,7 @@ class OAuthCred:
 
     def _oauth_flow(self, host, port, bind):
         flow = InstalledAppFlow.from_client_secrets_file(self.credentials_path, self.scopes)
-        creds = flow.run_local_server(port=port, host=host, bind_addr=bind)
+        creds = flow.run_local_server(port=port, host=host, bind_addr=bind, browser="firefox")
         if not creds.valid:
             raise RuntimeError('Failed oauth flow')
         return creds

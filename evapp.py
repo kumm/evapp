@@ -23,7 +23,7 @@ from wise.WiseClient import WiseClient
 TZ = pytz.timezone("Europe/Budapest")
 
 my_parser = argparse.ArgumentParser()
-my_parser.add_argument('cmd', type=str, help='get-statememts/get-wisebatch/send-money/sync-account')
+my_parser.add_argument('cmd', type=str, help='get-statememts/mail-statements/get-wisebatch/send-money/sync-account')
 my_parser.add_argument('--target', type=str, help='Target dir', required=False,
                        default=evapp_config.download_path)
 my_parser.add_argument('--year', type=int, help='Year', required=False,

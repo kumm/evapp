@@ -1,10 +1,7 @@
 import base64
 import json
-from datetime import timezone
 from enum import Enum
-from pprint import pprint
 
-import rsa
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 import urllib3
@@ -95,6 +92,7 @@ class WiseClient:
                 'type': balance_type.value,
                 'intervalStart': self.__convert_datetime(interval_start),
                 'intervalEnd': self.__convert_datetime(interval_end),
+                'addStamp': True,
                 'statementLocale': 'hu'
             })
 

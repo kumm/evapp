@@ -7,17 +7,15 @@ name = "pypi"
 google-api-python-client = "*"
 google-auth-httplib2 = "*"
 google-auth-oauthlib = "*"
-#rsa = "*"
 pycryptodome = "*"
 urllib3 = "*"
 python-dateutil = "*"
-zeep = "*"
-xmltodict = "*"
+pytz ="*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.10"
+python_version = "3"
 
 [scripts]
 sync-account = 'python evapp.py sync-account'

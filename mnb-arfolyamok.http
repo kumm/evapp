@@ -4,8 +4,8 @@ Content-Type: application/soap+xml
 <soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">
   <soap12:Body>
     <GetExchangeRates xmlns="http://www.mnb.hu/webservices/">
-         <startDate>2022-11-01</startDate>
-         <endDate>2022-11-12</endDate>
+         <startDate>2025-01-01</startDate>
+         <endDate>2025-12-31</endDate>
          <currencyNames>EUR,USD</currencyNames>
     </GetExchangeRates>
   </soap12:Body>
