@@ -1,6 +1,6 @@
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import dateutil.parser as dateparser
 from dateutil.parser import ParserError
 from ggle.SpreadSheet import SpreadSheet
@@ -32,16 +32,17 @@ def __extend_trx_formulas(last_formulas, new_trx_rows):
 
 def __load_balance_statements(account, last_time, tz):
     new_trx_entries = []
-    balance_rows = []
+    balance_map = {}
     for balance in account.get_balances():
         statement_json = balance.download_statement(last_time, datetime.now(), StatementFormat.JSON,
                                                     StatementType.FLAT)
         statement = json.loads(statement_json)
-        balance_rows.append(__map_balance_row(statement['endOfStatementBalance']))
+        __map_balance_row(balance_map, statement['endOfStatementBalance'])
         for trx in statement['transactions']:
             new_trx_entries.append(__map_trx_entry(trx, tz))
 
     new_trx_entries.sort(key=lambda e: e[0])
+    balance_rows = [[c, v] for c, v in balance_map.items()]
     balance_rows.sort(key=lambda r: r[0])
     return balance_rows, [e[1] for e in new_trx_entries]
 
@@ -73,14 +74,17 @@ def __map_trx_entry(trx, tz):
     return date, row
 
 
-def __map_balance_row(balance_result):
-    return [
-        balance_result['currency'], balance_result['value']
-    ]
+def __map_balance_row(balance_map, balance_result):
+    currency = balance_result['currency']
+    value = balance_result['value']
+    if currency in balance_map:
+        balance_map[currency] += value
+    else:
+        balance_map[currency] = value
 
 
 def __find_last_trx_info(trx_cell_values, tz):
-    last_time = datetime.utcnow() - timedelta(days=31)
+    last_time = datetime.now(UTC) - timedelta(days=31)
     last_formulas = []
     for trx in reversed(trx_cell_values):
         if len(trx) > 0 and trx[0] != '':

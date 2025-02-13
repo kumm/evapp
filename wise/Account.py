@@ -1,10 +1,7 @@
-import json
 import uuid
-from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
-from pprint import pprint
 
-from wise.WiseClient import StatementType, BalanceType, WiseClient
+from wise.WiseClient import BalanceType, WiseClient
 
 
 class Account:
@@ -38,12 +35,13 @@ class Account:
     def download_statement(self, currency, start_date, end_date, format, type):
         return self.wise.get_statement(self.profile_id, self.account_id, currency, start_date, end_date, format, type)
 
-    def get_balances(self, balance_type=BalanceType.STANDARD):
+    def get_balances(self, balance_type=None):
+        if balance_type is None:
+            balance_type = [BalanceType.STANDARD, BalanceType.SAVINGS]
         balances = []
         for balance_dict in self.wise.get_balances(self.profile_id, balance_type):
             balances.append(Balance(self.profile_id, self.wise, balance_dict))
         return balances
-
 
 class Balance:
     def __init__(self, profile_id, client: WiseClient, data):

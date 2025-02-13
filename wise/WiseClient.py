@@ -114,8 +114,9 @@ class WiseClient:
                 'statementLocale': 'hu'
             })
 
-    def get_balances(self, profile_id, balance_type: BalanceType):
-        return self.sca_req_json('GET', f'/v4/profiles/{profile_id}/balances?types={balance_type.value}')
+    def get_balances(self, profile_id, balance_types: list[BalanceType]):
+        types=','.join([b.value for b in balance_types])
+        return self.sca_req_json('GET', f'/v4/profiles/{profile_id}/balances?types={types}')
 
     def sca_req_json(self, method, url, query=None, body=None):
         return json.loads(self.sca_req(method, url, query, body))
