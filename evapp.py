@@ -2,6 +2,8 @@ from __future__ import print_function
 
 import argparse
 import getpass
+import glob
+import os
 from datetime import datetime, timedelta
 
 import pytz
@@ -12,11 +14,11 @@ from commands.mail_statements import mail_statements
 from commands.send_money import send_money
 from commands.sync_account import sync_account
 from config import google_config, evapp_config, wise_config
+from ggle import OAuthScopes
 from ggle.MailClient import MailClient
 from ggle.OAuthCred import OAuthCred
-from ggle.SpreadSheetClient import SpreadSheetClient
 from ggle.SpreadSheet import SpreadSheet
-from ggle import OAuthScopes
+from ggle.SpreadSheetClient import SpreadSheetClient
 from wise.Account import Account
 from wise.WiseClient import WiseClient
 
@@ -35,7 +37,7 @@ args = my_parser.parse_args()
 
 def main():
     if args.cmd == 'sync-account':
-        sync_account(get_spreadsheet(), get_account(), TZ)
+        sync_account(get_spreadsheet(), get_latest_statements_zip(), TZ)
 
     if args.cmd == 'get-statements':
         statements = get_statements(get_account(), args.year, args.month)
@@ -89,6 +91,18 @@ def get_spreadsheet():
 
 def get_gmail():
     return MailClient(get_google_creds())
+
+def get_latest_statements_zip(downloads_folder=None):
+    if downloads_folder is None:
+        downloads_folder = os.path.join(os.path.expanduser('~'), 'Downloads')
+
+    zip_files = glob.glob(os.path.join(downloads_folder, 'statement*.zip'))
+    if not zip_files:
+        raise FileNotFoundError("No statement ZIP files found in Downloads folder.")
+
+    latest_zip = max(zip_files, key=os.path.getmtime)
+    print(f"Latest ZIP file found: {latest_zip}")
+    return latest_zip
 
 
 if __name__ == '__main__':

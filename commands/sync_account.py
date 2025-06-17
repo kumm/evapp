@@ -1,19 +1,21 @@
-import json
 import re
-from datetime import datetime, timedelta, UTC
+import re
+import zipfile
+from datetime import timedelta
+
 import dateutil.parser as dateparser
 from dateutil.parser import ParserError
+
 from ggle.SpreadSheet import SpreadSheet
-from wise.Account import Account
-from wise.WiseClient import StatementFormat, StatementType
+from wise.CamtXmlParser import CamtXmlParser
 
-TRX_TABLE_WIDTH = 24
+TRX_TABLE_WIDTH = 10
 
 
-def sync_account(spreadsheet: SpreadSheet, account: Account, tz):
+def sync_account(spreadsheet: SpreadSheet, zip_path, tz):
     trx_cell_values = spreadsheet.get_trx_values()
     last_time, last_formulas = __find_last_trx_info(trx_cell_values, tz)
-    balance_rows, new_trx_rows = __load_balance_statements(account, last_time, tz)
+    balance_rows, new_trx_rows = __load_balance_statements(zip_path, last_time, tz)
     __extend_trx_formulas(last_formulas, new_trx_rows)
     if len(new_trx_rows) > 0:
         spreadsheet.append_trx_values(len(trx_cell_values), new_trx_rows)
@@ -30,61 +32,44 @@ def __extend_trx_formulas(last_formulas, new_trx_rows):
         row.extend(last_formulas)
 
 
-def __load_balance_statements(account, last_time, tz):
+def __load_balance_statements(zip_path, last_time, tz):
     new_trx_entries = []
     balance_map = {}
-    for balance in account.get_balances():
-        statement_json = balance.download_statement(last_time, datetime.now(), StatementFormat.JSON,
-                                                    StatementType.FLAT)
-        statement = json.loads(statement_json)
-        __map_balance_row(balance_map, statement['endOfStatementBalance'])
-        for trx in statement['transactions']:
-            new_trx_entries.append(__map_trx_entry(trx, tz))
+
+    with zipfile.ZipFile(zip_path, 'r') as z:
+        for file_info in z.infolist():
+            if file_info.filename.endswith('.xml'):
+                with z.open(file_info) as xml_file:
+                    xml_data = xml_file.read()
+                    camt = CamtXmlParser(xml_data, tz)
+                    for trx in camt.parse_transactions():
+                        if last_time is None or trx['ts'] > last_time:
+                            new_trx_entries.append(__map_trx_entry(trx, tz))
+                    amt, ccy = camt.parse_balance()
+                    balance_map[ccy] = balance_map.get(ccy, 0) + float(amt)
 
     new_trx_entries.sort(key=lambda e: e[0])
     balance_rows = [[c, v] for c, v in balance_map.items()]
     balance_rows.sort(key=lambda r: r[0])
-    return balance_rows, [e[1] for e in new_trx_entries]
+    return balance_rows, new_trx_entries
 
 
 def __map_trx_entry(trx, tz):
-    date = dateparser.isoparse(trx['date']).astimezone(tz)
     row = [
-        date.strftime("%Y-%m-%d %H:%M:%S"),
-        trx['referenceNumber'],
-        trx['type'],
-        trx['details']['type'],
-        trx['amount']['value'],
-        trx['amount']['currency'],
-        trx['details'].get('recipient', {}).get('bankAccount', ''),
-        trx['details'].get('recipient', {}).get('name', ''),
-        trx['details'].get('senderAccount', ''),
-        trx['details'].get('senderName', ''),
-        trx['details'].get('paymentReference'),
-        trx['details'].get('merchant', {}).get('name'),
-        trx['details'].get('merchant', {}).get('city'),
-        trx['details'].get('rate'),
-        trx['details'].get('amount', {}).get('value', ''),
-        trx['details'].get('amount', {}).get('currency', ''),
-        trx['details'].get('sourceAmount', {}).get('currency'),
-        trx['details'].get('targetAmount', {}).get('currency'),
-        trx['details']['description'],
-        json.dumps(trx),
+        trx['ts'].strftime("%Y-%m-%d %H:%M:%S"),
+        trx['id'],
+        trx['amt'].replace(".",","),
+        trx['ccy'],
+        trx['pty'],
+        trx['ref'],
+        trx['inf'],
+        # trx['xml']
     ]
-    return date, row
-
-
-def __map_balance_row(balance_map, balance_result):
-    currency = balance_result['currency']
-    value = balance_result['value']
-    if currency in balance_map:
-        balance_map[currency] += value
-    else:
-        balance_map[currency] = value
+    return row
 
 
 def __find_last_trx_info(trx_cell_values, tz):
-    last_time = datetime.now(UTC) - timedelta(days=31)
+    last_time = None
     last_formulas = []
     for trx in reversed(trx_cell_values):
         if len(trx) > 0 and trx[0] != '':
